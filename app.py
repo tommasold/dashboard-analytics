@@ -32,8 +32,11 @@ def upload_file():
     preview = df.head().to_dict(orient="records")
     return jsonify({"filename": file.filename, "preview": preview})
 
-@app.route("/histogram/<filename>/<column>", methods=["GET"])
-def generate_histogram(filename, column):
+
+# route per i vari diagrammi 
+
+@app.route("/plot/<filename>/<column>/<chart_type>", methods=["GET"])
+def generate_plot(filename, column, chart_type):
     filepath = os.path.join(app.config["UPLOAD_FOLDER"], filename)
 
     if not os.path.exists(filepath):
@@ -44,12 +47,42 @@ def generate_histogram(filename, column):
     if column not in df.columns:
         return jsonify({"error": f"Colonna '{column}' non trovata"}), 400
 
-    plt.figure(figsize=(6, 4))
-    df[column].hist(bins=20, alpha=0.7, color="blue")
-    plt.xlabel(column)
-    plt.ylabel("Frequenza")
-    plt.title(f"Istogramma di {column}")
+    if not pd.api.types.is_numeric_dtype(df[column]):
+        return jsonify({"error": f"La colonna '{column}' non è numerica"}), 400
 
+    plt.figure(figsize=(6, 4))
+
+    if chart_type == "histogram":
+        df[column].hist(bins=20, alpha=0.7, color="blue")
+        plt.xlabel(column)
+        plt.ylabel("Frequenza")
+        plt.title(f"Istogramma di {column}")
+
+    elif chart_type == "boxplot":
+        df.boxplot(column=[column])
+        plt.title(f"Boxplot di {column}")
+
+    elif chart_type == "scatter":
+        # Selezioniamo un'altra colonna numerica casuale per fare il grafico scatter
+        numeric_cols = df.select_dtypes(include=["number"]).columns.tolist()
+        numeric_cols.remove(column)
+        if not numeric_cols:
+            return jsonify({"error": "Nessun'altra colonna numerica disponibile per scatter plot"}), 400
+        df.plot.scatter(x=column, y=numeric_cols[0], alpha=0.5, color="red")
+        plt.xlabel(column)
+        plt.ylabel(numeric_cols[0])
+        plt.title(f"Scatter Plot: {column} vs {numeric_cols[0]}")
+
+    elif chart_type == "line":
+        df[column].plot(kind="line", marker="o", linestyle="-", color="green")
+        plt.xlabel("Indice")
+        plt.ylabel(column)
+        plt.title(f"Line Chart di {column}")
+
+    else:
+        return jsonify({"error": "Tipo di grafico non supportato"}), 400
+
+    # Salvare il grafico come immagine Base64
     img = BytesIO()
     plt.savefig(img, format="png")
     img.seek(0)
@@ -58,7 +91,7 @@ def generate_histogram(filename, column):
 
     return jsonify({"image": f"data:image/png;base64,{img_base64}"})
 
-@app.route("/stats/<filename>/<column>", methods=["GET"])
+@app.route("/stats/<filename>/<column>", methods=["POST"])
 def get_statistics(filename, column):
     filepath = os.path.join(app.config["UPLOAD_FOLDER"], filename)
 
@@ -70,23 +103,28 @@ def get_statistics(filename, column):
     if column not in df.columns:
         return jsonify({"error": f"Colonna '{column}' non trovata"}), 400
 
-    # Controlliamo che la colonna sia numerica
     if not pd.api.types.is_numeric_dtype(df[column]):
-        return jsonify({"error": f"La colonna '{column}' non è numerica"}), 400
+        return jsonify({"error": f"La colonna '{column}' contiene testo, seleziona una colonna numerica"}), 400
 
-    # Calcolo delle statistiche
-    stats = {
-        "media": df[column].mean(),
-        "mediana": df[column].median(),
-        "deviazione_standard": df[column].std(),
-        "minimo": df[column].min(),
-        "massimo": df[column].max(),
-        "conteggio": df[column].count(),
-        "quartile_1": df[column].quantile(0.25),
-        "quartile_3": df[column].quantile(0.75)
+    selected_stats = request.json.get("statistics", [])
+
+    stats_map = {
+        "media": float(df[column].mean()),  # Converti in float
+        "mediana": float(df[column].median()),
+        "moda": float(df[column].mode()[0]) if not df[column].mode().empty else None,
+        "deviazione_standard": float(df[column].std()),
+        "varianza": float(df[column].var()),
+        "minimo": float(df[column].min()),
+        "massimo": float(df[column].max()),
+        "quartile_1": float(df[column].quantile(0.25)),
+        "quartile_3": float(df[column].quantile(0.75)),
+        "conteggio": int(df[column].count()),  # Converti in int
     }
 
-    return jsonify(stats)
+    selected_stats_result = {stat: stats_map[stat] for stat in selected_stats if stat in stats_map}
+
+    return jsonify(selected_stats_result)
+
 
 if __name__ == "__main__":
     app.run(debug=True)

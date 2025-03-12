@@ -26,105 +26,178 @@
             </table>
         </div>
 
-        <!-- Selezione colonna -->
-        <div class="mt-4" id="columnSelection" style="display: none;">
-            <h4>📌 Seleziona una colonna numerica</h4>
-            <select id="columnDropdown" class="form-select"></select>
-            <button id="generateChartBtn" class="btn btn-success mt-3">Genera Istogramma</button>
-        </div>
+        <!-- Selezione colonna e tipo di grafico -->
+<div class="mt-4" id="columnSelection" style="display: none;">
+    <h4>📌 Seleziona una colonna numerica</h4>
+    <select id="columnDropdown" class="form-select"></select>
 
-        <!-- Sezione Statistiche -->
-        <div class="mt-4" id="statsSection" style="display: none;">
-            <h4>📈 Genera Statistiche</h4>
-            <button id="generateStatsBtn" class="btn btn-info mt-3">Calcola Statistiche</button>
-            <div class="mt-3" id="statsResults"></div>
-        </div>
+    <h4 class="mt-3">📊 Scegli il tipo di grafico</h4>
+    <select id="chartTypeDropdown" class="form-select">
+        <option value="histogram">Istogramma</option>
+        <option value="boxplot">Boxplot</option>
+        <option value="scatter">Scatter Plot</option>
+        <option value="line">Line Chart</option>
+    </select>
 
-        <!-- Sezione Grafico -->
-        <div class="mt-4" id="chartSection" style="display: none;">
-            <h4>📉 Istogramma</h4>
-            <img id="chart" class="img-fluid" alt="Grafico">
-        </div>
+    <button id="generateChartBtn" class="btn btn-success mt-3">Genera Grafico</button>
+</div>
+
+<!-- Sezione Grafico -->
+<div class="mt-4" id="chartSection" style="display: none;">
+    <h4>📈 Grafico</h4>
+    <img id="chart" class="img-fluid" alt="Grafico">
+</div>
+
+
+<!-- Sezione per selezionare le statistiche -->
+<div class="mt-4" id="statsSelection" style="display: none;">
+    <h4>📊 Scegli le statistiche da calcolare</h4>
+
+    <div id="statsCheckboxes">
+        <label><input type="checkbox" value="media"> Media</label><br>
+        <label><input type="checkbox" value="mediana"> Mediana</label><br>
+        <label><input type="checkbox" value="moda"> Moda</label><br>
+        <label><input type="checkbox" value="deviazione_standard"> Deviazione Standard</label><br>
+        <label><input type="checkbox" value="varianza"> Varianza</label><br>
+        <label><input type="checkbox" value="minimo"> Minimo</label><br>
+        <label><input type="checkbox" value="massimo"> Massimo</label><br>
+        <label><input type="checkbox" value="quartile_1"> Primo Quartile (Q1)</label><br>
+        <label><input type="checkbox" value="quartile_3"> Terzo Quartile (Q3)</label><br>
+        <label><input type="checkbox" value="conteggio"> Conteggio</label><br>
     </div>
 
-    <script>
-        document.getElementById("uploadBtn").addEventListener("click", function() {
-            let fileInput = document.getElementById("fileInput").files[0];
-            if (!fileInput) {
-                alert("Seleziona un file CSV!");
+    <button id="generateStatsBtn" class="btn btn-info mt-3">Calcola Statistiche</button>
+    <div class="mt-3" id="statsResults"></div>
+</div>
+
+
+
+
+<script>
+    document.getElementById("uploadBtn").addEventListener("click", function() {
+        let fileInput = document.getElementById("fileInput").files[0];
+        if (!fileInput) {
+            alert("Seleziona un file CSV!");
+            return;
+        }
+
+        let formData = new FormData();
+        formData.append("file", fileInput);
+
+        fetch("/upload", { method: "POST", body: formData })
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                alert("Errore: " + data.error);
                 return;
             }
 
-            let formData = new FormData();
-            formData.append("file", fileInput);
+            let filename = data.filename;
+            let preview = data.preview;
+            let columns = Object.keys(preview[0]);
 
-            fetch("/upload", { method: "POST", body: formData })
-            .then(response => response.json())
-            .then(data => {
-                if (data.error) {
-                    alert("Errore: " + data.error);
+            // Mostra anteprima dati
+            document.getElementById("previewSection").style.display = "block";
+            document.getElementById("tableHead").innerHTML = "<tr>" + columns.map(col => `<th>${col}</th>`).join("") + "</tr>";
+            document.getElementById("tableBody").innerHTML = preview.map(row => "<tr>" + columns.map(col => `<td>${row[col]}</td>`).join("") + "</tr>").join("");
+
+            // Mostra selezione colonna e statistiche
+            document.getElementById("columnSelection").style.display = "block";
+            document.getElementById("statsSelection").style.display = "block";
+
+            let columnDropdown = document.getElementById("columnDropdown");
+            columnDropdown.innerHTML = "";
+            columns.forEach(col => {
+                columnDropdown.innerHTML += `<option value="${col}">${col}</option>`;
+            });
+
+            // Calcola statistiche
+            document.getElementById("generateStatsBtn").onclick = function() {
+                let selectedColumn = columnDropdown.value;
+                let selectedStats = Array.from(document.querySelectorAll("#statsCheckboxes input:checked"))
+                                        .map(checkbox => checkbox.value);
+
+                if (selectedStats.length === 0) {
+                    alert("Seleziona almeno una statistica!");
                     return;
                 }
 
-                let filename = data.filename;
-                let preview = data.preview;
-                let columns = Object.keys(preview[0]);
+                fetch(`/stats/${filename}/${selectedColumn}`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ statistics: selectedStats })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    let statsHtml = "<ul>";
+                    for (let key in data) {
+                        statsHtml += `<li><b>${key.replace("_", " ")}:</b> ${data[key]}</li>`;
+                    }
+                    statsHtml += "</ul>";
 
-                // Mostra anteprima dati
-                document.getElementById("previewSection").style.display = "block";
-                document.getElementById("tableHead").innerHTML = "<tr>" + columns.map(col => `<th>${col}</th>`).join("") + "</tr>";
-                document.getElementById("tableBody").innerHTML = preview.map(row => "<tr>" + columns.map(col => `<td>${row[col]}</td>`).join("") + "</tr>").join("");
-
-                // Mostra selezione colonna
-                document.getElementById("columnSelection").style.display = "block";
-                let columnDropdown = document.getElementById("columnDropdown");
-                columnDropdown.innerHTML = "";
-                columns.forEach(col => {
-                    columnDropdown.innerHTML += `<option value="${col}">${col}</option>`;
+                    document.getElementById("statsResults").innerHTML = statsHtml;
                 });
+            };
+        })
+        .catch(error => console.error("Errore:", error));
+    });
+    document.getElementById("uploadBtn").addEventListener("click", function() {
+        let fileInput = document.getElementById("fileInput").files[0];
+        if (!fileInput) {
+            alert("Seleziona un file CSV!");
+            return;
+        }
 
-                // Mostra sezione statistiche
-                document.getElementById("statsSection").style.display = "block";
+        let formData = new FormData();
+        formData.append("file", fileInput);
 
-                // Genera grafico al click
-                document.getElementById("generateChartBtn").onclick = function() {
-                    let selectedColumn = columnDropdown.value;
-                    fetch(`/histogram/${filename}/${selectedColumn}`)
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.error) {
-                            alert("Errore: " + data.error);
-                            return;
-                        }
-                        document.getElementById("chart").src = data.image;
-                        document.getElementById("chartSection").style.display = "block";
-                    });
-                };
+        fetch("/upload", { method: "POST", body: formData })
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                alert("Errore: " + data.error);
+                return;
+            }
 
-                // Genera statistiche al click
-                document.getElementById("generateStatsBtn").onclick = function() {
-                    let selectedColumn = columnDropdown.value;
-                    fetch(`/stats/${filename}/${selectedColumn}`)
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.error) {
-                            alert("Errore: " + data.error);
-                            return;
-                        }
+            let filename = data.filename;
+            let preview = data.preview;
+            let columns = Object.keys(preview[0]);
 
-                        let statsHtml = "<ul>";
-                        for (let key in data) {
-                            statsHtml += `<li><b>${key.replace("_", " ")}:</b> ${data[key].toFixed(2)}</li>`;
-                        }
-                        statsHtml += "</ul>";
+            // Mostra anteprima dati
+            document.getElementById("previewSection").style.display = "block";
+            document.getElementById("tableHead").innerHTML = "<tr>" + columns.map(col => `<th>${col}</th>`).join("") + "</tr>";
+            document.getElementById("tableBody").innerHTML = preview.map(row => "<tr>" + columns.map(col => `<td>${row[col]}</td>`).join("") + "</tr>").join("");
 
-                        document.getElementById("statsResults").innerHTML = statsHtml;
-                    });
-                };
-            })
-            .catch(error => console.error("Errore:", error));
-        });
-    </script>
+            // Mostra selezione colonna e tipo di grafico
+            document.getElementById("columnSelection").style.display = "block";
+            let columnDropdown = document.getElementById("columnDropdown");
+            columnDropdown.innerHTML = "";
+            columns.forEach(col => {
+                columnDropdown.innerHTML += `<option value="${col}">${col}</option>`;
+            });
+
+            // Genera grafico al click
+            document.getElementById("generateChartBtn").onclick = function() {
+                let selectedColumn = columnDropdown.value;
+                let chartType = document.getElementById("chartTypeDropdown").value;
+
+                fetch(`/plot/${filename}/${selectedColumn}/${chartType}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        alert("Errore: " + data.error);
+                        return;
+                    }
+                    document.getElementById("chart").src = data.image;
+                    document.getElementById("chartSection").style.display = "block";
+                });
+            };
+        })
+        .catch(error => console.error("Errore:", error));
+    });
+    
+</script>
+
 
 </body>
 </html>
