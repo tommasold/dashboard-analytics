@@ -5,198 +5,93 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard Analisi Dati</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-    <div class="container mt-5">
-        <h2 class="text-center">📊 Dashboard di Analisi Dati</h2>
 
-        <!-- Sezione Upload File -->
-        <div class="card p-4 mt-4">
-            <h4>📂 Carica un file CSV</h4>
-            <input type="file" id="fileInput" class="form-control">
-            <button id="uploadBtn" class="btn btn-primary mt-3">Carica</button>
+    <!-- Navbar -->
+    <nav class="navbar navbar-dark bg-dark fixed-top">
+        <div class="container">
+            <a class="navbar-brand" href="#">📊 Dashboard Analisi Dati</a>
+        </div>
+    </nav>
+
+    <!-- Contenuto principale -->
+    <div class="container mt-5 pt-5">
+        <div class="row">
+
+            <!-- Sezione Upload -->
+            <div class="col-md-6">
+                <div class="card shadow p-4">
+                    <h4><i class="fas fa-upload"></i> Carica un file CSV</h4>
+                    <input type="file" id="fileInput" class="form-control">
+                    <button id="uploadBtn" class="btn btn-primary mt-3"><i class="fas fa-cloud-upload-alt"></i> Carica</button>
+                </div>
+            </div>
+
+            <!-- Sezione Selezione Colonne -->
+            <div class="col-md-6">
+                <div class="card shadow p-4" id="columnSelection" style="display: none;">
+                    <h4><i class="fas fa-columns"></i> Seleziona una colonna numerica</h4>
+                    <select id="columnDropdown" class="form-select"></select>
+
+                    <h4 class="mt-3"><i class="fas fa-chart-bar"></i> Scegli il tipo di grafico</h4>
+                    <select id="chartTypeDropdown" class="form-select">
+                        <option value="histogram">Istogramma</option>
+                        <option value="boxplot">Boxplot</option>
+                        <option value="scatter">Scatter Plot</option>
+                        <option value="line">Line Chart</option>
+                    </select>
+
+                    <button id="generateChartBtn" class="btn btn-success mt-3"><i class="fas fa-chart-line"></i> Genera Grafico</button>
+                </div>
+            </div>
+
         </div>
 
-        <!-- Sezione Anteprima -->
-        <div class="mt-4" id="previewSection" style="display: none;">
-            <h4>🔍 Anteprima Dataset</h4>
-            <table class="table table-striped mt-3">
-                <thead id="tableHead"></thead>
-                <tbody id="tableBody"></tbody>
-            </table>
+        <!-- Sezione Anteprima Dataset -->
+        <div class="card shadow mt-4 p-4" id="previewSection" style="display: none;">
+            <h4><i class="fas fa-table"></i> Anteprima Dataset</h4>
+            <div class="table-responsive">
+                <table class="table table-striped mt-3">
+                    <thead id="tableHead"></thead>
+                    <tbody id="tableBody"></tbody>
+                </table>
+            </div>
         </div>
 
-        <!-- Selezione colonna e tipo di grafico -->
-<div class="mt-4" id="columnSelection" style="display: none;">
-    <h4>📌 Seleziona una colonna numerica</h4>
-    <select id="columnDropdown" class="form-select"></select>
+        <!-- Sezione Grafico -->
+        <div class="card shadow mt-4 p-4 text-center" id="chartSection" style="display: none;">
+            <h4><i class="fas fa-chart-area"></i> Grafico</h4>
+            <img id="chart" class="img-fluid mt-3" alt="Grafico">
+        </div>
 
-    <h4 class="mt-3">📊 Scegli il tipo di grafico</h4>
-    <select id="chartTypeDropdown" class="form-select">
-        <option value="histogram">Istogramma</option>
-        <option value="boxplot">Boxplot</option>
-        <option value="scatter">Scatter Plot</option>
-        <option value="line">Line Chart</option>
-    </select>
+        <!-- Sezione Selezione Statistiche -->
+        <div class="card shadow mt-4 p-4" id="statsSelection" style="display: none;">
+            <h4><i class="fas fa-calculator"></i> Seleziona le statistiche</h4>
+            <div id="statsCheckboxes" class="mt-2">
+                <label><input type="checkbox" value="media"> Media</label><br>
+                <label><input type="checkbox" value="mediana"> Mediana</label><br>
+                <label><input type="checkbox" value="moda"> Moda</label><br>
+                <label><input type="checkbox" value="deviazione_standard"> Deviazione Standard</label><br>
+                <label><input type="checkbox" value="varianza"> Varianza</label><br>
+                <label><input type="checkbox" value="minimo"> Minimo</label><br>
+                <label><input type="checkbox" value="massimo"> Massimo</label><br>
+                <label><input type="checkbox" value="quartile_1"> Primo Quartile (Q1)</label><br>
+                <label><input type="checkbox" value="quartile_3"> Terzo Quartile (Q3)</label><br>
+                <label><input type="checkbox" value="conteggio"> Conteggio</label><br>
+            </div>
 
-    <button id="generateChartBtn" class="btn btn-success mt-3">Genera Grafico</button>
-</div>
-
-<!-- Sezione Grafico -->
-<div class="mt-4" id="chartSection" style="display: none;">
-    <h4>📈 Grafico</h4>
-    <img id="chart" class="img-fluid" alt="Grafico">
-</div>
-
-
-<!-- Sezione per selezionare le statistiche -->
-<div class="mt-4" id="statsSelection" style="display: none;">
-    <h4>📊 Scegli le statistiche da calcolare</h4>
-
-    <div id="statsCheckboxes">
-        <label><input type="checkbox" value="media"> Media</label><br>
-        <label><input type="checkbox" value="mediana"> Mediana</label><br>
-        <label><input type="checkbox" value="moda"> Moda</label><br>
-        <label><input type="checkbox" value="deviazione_standard"> Deviazione Standard</label><br>
-        <label><input type="checkbox" value="varianza"> Varianza</label><br>
-        <label><input type="checkbox" value="minimo"> Minimo</label><br>
-        <label><input type="checkbox" value="massimo"> Massimo</label><br>
-        <label><input type="checkbox" value="quartile_1"> Primo Quartile (Q1)</label><br>
-        <label><input type="checkbox" value="quartile_3"> Terzo Quartile (Q3)</label><br>
-        <label><input type="checkbox" value="conteggio"> Conteggio</label><br>
+            <button id="generateStatsBtn" class="btn btn-info mt-3"><i class="fas fa-chart-pie"></i> Calcola Statistiche</button>
+            <div class="mt-3" id="statsResults"></div>
+        </div>
     </div>
 
-    <button id="generateStatsBtn" class="btn btn-info mt-3">Calcola Statistiche</button>
-    <div class="mt-3" id="statsResults"></div>
-</div>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/static/script.js"></script>
 
-
-
-
-<script>
-    document.getElementById("uploadBtn").addEventListener("click", function() {
-        let fileInput = document.getElementById("fileInput").files[0];
-        if (!fileInput) {
-            alert("Seleziona un file CSV!");
-            return;
-        }
-
-        let formData = new FormData();
-        formData.append("file", fileInput);
-
-        fetch("/upload", { method: "POST", body: formData })
-        .then(response => response.json())
-        .then(data => {
-            if (data.error) {
-                alert("Errore: " + data.error);
-                return;
-            }
-
-            let filename = data.filename;
-            let preview = data.preview;
-            let columns = Object.keys(preview[0]);
-
-            // Mostra anteprima dati
-            document.getElementById("previewSection").style.display = "block";
-            document.getElementById("tableHead").innerHTML = "<tr>" + columns.map(col => `<th>${col}</th>`).join("") + "</tr>";
-            document.getElementById("tableBody").innerHTML = preview.map(row => "<tr>" + columns.map(col => `<td>${row[col]}</td>`).join("") + "</tr>").join("");
-
-            // Mostra selezione colonna e statistiche
-            document.getElementById("columnSelection").style.display = "block";
-            document.getElementById("statsSelection").style.display = "block";
-
-            let columnDropdown = document.getElementById("columnDropdown");
-            columnDropdown.innerHTML = "";
-            columns.forEach(col => {
-                columnDropdown.innerHTML += `<option value="${col}">${col}</option>`;
-            });
-
-            // Calcola statistiche
-            document.getElementById("generateStatsBtn").onclick = function() {
-                let selectedColumn = columnDropdown.value;
-                let selectedStats = Array.from(document.querySelectorAll("#statsCheckboxes input:checked"))
-                                        .map(checkbox => checkbox.value);
-
-                if (selectedStats.length === 0) {
-                    alert("Seleziona almeno una statistica!");
-                    return;
-                }
-
-                fetch(`/stats/${filename}/${selectedColumn}`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ statistics: selectedStats })
-                })
-                .then(response => response.json())
-                .then(data => {
-                    let statsHtml = "<ul>";
-                    for (let key in data) {
-                        statsHtml += `<li><b>${key.replace("_", " ")}:</b> ${data[key]}</li>`;
-                    }
-                    statsHtml += "</ul>";
-
-                    document.getElementById("statsResults").innerHTML = statsHtml;
-                });
-            };
-        })
-        .catch(error => console.error("Errore:", error));
-    });
-    document.getElementById("uploadBtn").addEventListener("click", function() {
-        let fileInput = document.getElementById("fileInput").files[0];
-        if (!fileInput) {
-            alert("Seleziona un file CSV!");
-            return;
-        }
-
-        let formData = new FormData();
-        formData.append("file", fileInput);
-
-        fetch("/upload", { method: "POST", body: formData })
-        .then(response => response.json())
-        .then(data => {
-            if (data.error) {
-                alert("Errore: " + data.error);
-                return;
-            }
-
-            let filename = data.filename;
-            let preview = data.preview;
-            let columns = Object.keys(preview[0]);
-
-            // Mostra anteprima dati
-            document.getElementById("previewSection").style.display = "block";
-            document.getElementById("tableHead").innerHTML = "<tr>" + columns.map(col => `<th>${col}</th>`).join("") + "</tr>";
-            document.getElementById("tableBody").innerHTML = preview.map(row => "<tr>" + columns.map(col => `<td>${row[col]}</td>`).join("") + "</tr>").join("");
-
-            // Mostra selezione colonna e tipo di grafico
-            document.getElementById("columnSelection").style.display = "block";
-            let columnDropdown = document.getElementById("columnDropdown");
-            columnDropdown.innerHTML = "";
-            columns.forEach(col => {
-                columnDropdown.innerHTML += `<option value="${col}">${col}</option>`;
-            });
-
-            // Genera grafico al click
-            document.getElementById("generateChartBtn").onclick = function() {
-                let selectedColumn = columnDropdown.value;
-                let chartType = document.getElementById("chartTypeDropdown").value;
-
-                fetch(`/plot/${filename}/${selectedColumn}/${chartType}`)
-                .then(response => response.json())
-                .then(data => {
-                    if (data.error) {
-                        alert("Errore: " + data.error);
-                        return;
-                    }
-                    document.getElementById("chart").src = data.image;
-                    document.getElementById("chartSection").style.display = "block";
-                });
-            };
-        })
-        .catch(error => console.error("Errore:", error));
-    });
-    
-</script>
 
 
 </body>
